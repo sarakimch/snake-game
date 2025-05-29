@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Snake Game</title>
     <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
         body {
             display: flex;
             flex-direction: column;
@@ -12,11 +17,15 @@
             justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
-            padding: 20px;
+            padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 20px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 20px);
             background-color: #1a472a;
             font-family: 'Press Start 2P', system-ui, -apple-system, sans-serif;
             overflow-x: hidden;
             box-sizing: border-box;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overscroll-behavior: none;
         }
 
         .game-wrapper {
@@ -25,14 +34,17 @@
             align-items: flex-start;
             justify-content: center;
             width: 100%;
-            gap: 20px;
+            gap: 40px;
             margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         #game-container {
             position: relative;
             width: 85vmin;
             height: 85vmin;
+            max-width: 600px;
+            max-height: 600px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
             flex-shrink: 0;
         }
@@ -96,15 +108,19 @@
         }
 
         #controls-container {
+            position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
-            padding: 20px;
+            gap: 15px;
+            padding: 25px;
             background-color: rgba(26, 71, 42, 0.8);
             border: 2px solid #2d5a3c;
             border-radius: 8px;
-            margin-top: 0;
+            margin: 0;
+            width: fit-content;
+            height: fit-content;
+            flex-shrink: 0;
         }
 
         #controls-title {
@@ -112,20 +128,20 @@
             font-size: 16px;
             text-shadow: 2px 2px 0px #1a472a;
             margin-bottom: 10px;
+            text-align: center;
         }
 
         #direction-controls {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
             touch-action: none;
-            -webkit-tap-highlight-color: transparent;
         }
 
         .control-row {
             display: flex;
             justify-content: center;
-            gap: 6px;
+            gap: 8px;
             touch-action: none;
         }
 
@@ -146,6 +162,7 @@
             -webkit-user-select: none;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.2s;
         }
 
         .control-btn:active {
@@ -156,16 +173,29 @@
             .game-wrapper {
                 flex-direction: column;
                 align-items: center;
+                gap: 30px;
+            }
+
+            #game-container {
+                width: 85vmin;
+                height: 85vmin;
+                max-width: none;
+                max-height: none;
             }
 
             #controls-container {
                 margin-bottom: 40px;
+                padding: 20px;
             }
         }
 
         @media (max-width: 768px) {
             body {
                 padding: 10px;
+            }
+
+            .game-wrapper {
+                gap: 20px;
             }
 
             .control-btn {

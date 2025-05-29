@@ -45,85 +45,99 @@ const directionButtons = {
     'right-btn': 'right'
 };
 
+// Add touch and click handlers for direction buttons
 Object.entries(directionButtons).forEach(([btnId, dir]) => {
     const btn = document.getElementById(btnId);
+    if (!btn) return; // Skip if button not found
+    
+    const handleDirectionInput = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (gameOver) {
+            init();
+            return;
+        }
+        
+        const canChangeDirection = 
+            (dir === 'up' && direction !== 'down') ||
+            (dir === 'down' && direction !== 'up') ||
+            (dir === 'left' && direction !== 'right') ||
+            (dir === 'right' && direction !== 'left');
+        
+        if (canChangeDirection) {
+            nextDirection = dir;
+        }
+    };
     
     // Handle both touch and click events
-    ['touchstart', 'mousedown'].forEach(eventType => {
-        btn.addEventListener(eventType, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (gameOver) {
-                init();
-                return;
-            }
-            
-            const canChangeDirection = 
-                (dir === 'up' && direction !== 'down') ||
-                (dir === 'down' && direction !== 'up') ||
-                (dir === 'left' && direction !== 'right') ||
-                (dir === 'right' && direction !== 'left');
-            
-            if (canChangeDirection) {
-                nextDirection = dir;
-            }
-        });
-    });
+    btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
+    btn.addEventListener('mousedown', handleDirectionInput);
 });
 
 // Prevent default touch behaviors on game container
 const gameContainer = document.getElementById('game-container');
+const preventDefaultTouch = (e) => {
+    if (e.target.closest('#direction-controls')) return; // Allow touch events on controls
+    e.preventDefault();
+};
+
 ['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
-    gameContainer.addEventListener(eventType, (e) => {
-        e.preventDefault();
-    }, { passive: false });
+    gameContainer.addEventListener(eventType, preventDefaultTouch, { passive: false });
 });
 
-// Handle touch events for swipe controls
-canvas.addEventListener('touchstart', (e) => {
+// Handle touch events for swipe controls on canvas
+const handleCanvasTouch = (e) => {
+    if (e.target !== canvas) return; // Only handle touches on the canvas
     e.preventDefault();
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-});
+};
 
-canvas.addEventListener('touchmove', (e) => {
+const handleCanvasMove = (e) => {
+    if (e.target !== canvas) return;
     e.preventDefault();
-});
+};
 
-canvas.addEventListener('touchend', (e) => {
-    if (touchStartX !== null && touchStartY !== null) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-        
-        if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
-            if (gameOver) {
-                init();
-            }
-            return;
+const handleCanvasEnd = (e) => {
+    if (e.target !== canvas || touchStartX === null || touchStartY === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
+        if (gameOver) {
+            init();
         }
-        
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            if (deltaX > 0 && direction !== 'left') {
-                nextDirection = 'right';
-            } else if (deltaX < 0 && direction !== 'right') {
-                nextDirection = 'left';
-            }
-        } else {
-            if (deltaY > 0 && direction !== 'up') {
-                nextDirection = 'down';
-            } else if (deltaY < 0 && direction !== 'down') {
-                nextDirection = 'up';
-            }
-        }
-        
         touchStartX = null;
         touchStartY = null;
+        return;
     }
-});
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX > 0 && direction !== 'left') {
+            nextDirection = 'right';
+        } else if (deltaX < 0 && direction !== 'right') {
+            nextDirection = 'left';
+        }
+    } else {
+        if (deltaY > 0 && direction !== 'up') {
+            nextDirection = 'down';
+        } else if (deltaY < 0 && direction !== 'down') {
+            nextDirection = 'up';
+        }
+    }
+    
+    touchStartX = null;
+    touchStartY = null;
+};
+
+canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+canvas.addEventListener('touchmove', handleCanvasMove, { passive: false });
+canvas.addEventListener('touchend', handleCanvasEnd);
 
 // Handle canvas resize
 function resizeCanvas() {
