@@ -17,6 +17,20 @@ function debug(msg) {
     }
 }
 
+// Error logging
+function logError(error) {
+    console.error('[ERROR]', error);
+    const debugDiv = document.getElementById('debug-log');
+    if (debugDiv) {
+        debugDiv.textContent = `Error: ${error.message}`;
+        debugDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+        setTimeout(() => {
+            debugDiv.textContent = '';
+            debugDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        }, 5000);
+    }
+}
+
 // Colors
 const COLORS = {
     darkGrass: '#2d5a3c',
@@ -29,8 +43,21 @@ const COLORS = {
 const FLOWERS = ['🌸', '🌹', '🌺', '🌻', '🌼', '💐', '🌷'];
 
 // Game variables
-let canvas = document.getElementById('gameCanvas');
-let ctx = canvas.getContext('2d');
+let canvas, ctx, gameLoop;
+
+try {
+    canvas = document.getElementById('gameCanvas');
+    if (!canvas) {
+        throw new Error('Canvas element not found');
+    }
+    ctx = canvas.getContext('2d');
+    if (!ctx) {
+        throw new Error('Could not get canvas context');
+    }
+} catch (error) {
+    logError(error);
+}
+
 let score = 0;
 let level = 1;
 let fruitsInLevel = 0;
@@ -39,7 +66,6 @@ let snake = [];
 let direction = 'right';
 let nextDirection = 'right';
 let food = null;
-let gameLoop = null;
 let gameOver = false;
 let currentFlower = FLOWERS[0];
 
@@ -48,65 +74,117 @@ let touchStartX = null;
 let touchStartY = null;
 const MIN_SWIPE = 30; // Minimum swipe distance to trigger direction change
 
-// Direction button controls
-const directionButtons = {
-    'up-btn': 'up',
-    'down-btn': 'down',
-    'left-btn': 'left',
-    'right-btn': 'right'
-};
+// Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    debug('DOM loaded, initializing game...');
+    try {
+        // Initialize game elements
+        canvas = document.getElementById('gameCanvas');
+        if (!canvas) {
+            throw new Error('Canvas element not found after DOM load');
+        }
+        ctx = canvas.getContext('2d');
+        if (!ctx) {
+            throw new Error('Could not get canvas context after DOM load');
+        }
 
-// Add touch and click handlers for direction buttons
-Object.entries(directionButtons).forEach(([btnId, dir]) => {
-    const btn = document.getElementById(btnId);
-    if (!btn) {
-        debug(`Button not found: ${btnId}`);
-        return;
-    }
-    
-    const handleDirectionInput = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        debug(`Direction button pressed: ${dir}`);
+        // Set up event listeners
+        setupEventListeners();
         
-        if (gameOver) {
-            debug('Game over, restarting');
-            init();
+        // Initialize the game
+        init();
+        
+        debug('Game initialization complete');
+    } catch (error) {
+        logError(error);
+    }
+});
+
+// Set up event listeners
+function setupEventListeners() {
+    debug('Setting up event listeners...');
+    
+    // Direction button controls
+    const directionButtons = {
+        'up-btn': 'up',
+        'down-btn': 'down',
+        'left-btn': 'left',
+        'right-btn': 'right'
+    };
+
+    Object.entries(directionButtons).forEach(([btnId, dir]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) {
+            debug(`Button not found: ${btnId}`);
             return;
         }
         
-        const canChangeDirection = 
-            (dir === 'up' && direction !== 'down') ||
-            (dir === 'down' && direction !== 'up') ||
-            (dir === 'left' && direction !== 'right') ||
-            (dir === 'right' && direction !== 'left');
+        const handleDirectionInput = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            debug(`Direction button pressed: ${dir}`);
+            
+            if (gameOver) {
+                debug('Game over, restarting');
+                init();
+                return;
+            }
+            
+            const canChangeDirection = 
+                (dir === 'up' && direction !== 'down') ||
+                (dir === 'down' && direction !== 'up') ||
+                (dir === 'left' && direction !== 'right') ||
+                (dir === 'right' && direction !== 'left');
+            
+            if (canChangeDirection) {
+                debug(`Direction changed to: ${dir}`);
+                nextDirection = dir;
+            } else {
+                debug(`Invalid direction change: ${dir} (current: ${direction})`);
+            }
+        };
         
-        if (canChangeDirection) {
-            debug(`Direction changed to: ${dir}`);
-            nextDirection = dir;
-        } else {
-            debug(`Invalid direction change: ${dir} (current: ${direction})`);
-        }
-    };
-    
-    btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
-    btn.addEventListener('mousedown', handleDirectionInput);
-});
+        btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
+        btn.addEventListener('mousedown', handleDirectionInput);
+    });
 
-// Prevent default touch behaviors on game container
-const gameContainer = document.getElementById('game-container');
-const preventDefaultTouch = (e) => {
-    if (e.target.closest('#direction-controls')) {
-        debug('Touch on controls, allowing event');
+    // Prevent default touch behaviors on game container
+    const gameContainer = document.getElementById('game-container');
+    if (!gameContainer) {
+        debug('Game container not found');
         return;
     }
-    debug('Preventing default touch behavior');
-    e.preventDefault();
-};
 
-['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
-    gameContainer.addEventListener(eventType, preventDefaultTouch, { passive: false });
-});
+    const preventDefaultTouch = (e) => {
+        if (e.target.closest('#direction-controls')) {
+            debug('Touch on controls, allowing event');
+            return;
+        }
+        debug('Preventing default touch behavior');
+        e.preventDefault();
+    };
+
+    ['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
+        gameContainer.addEventListener(eventType, preventDefaultTouch, { passive: false });
+    });
+
+    // Handle touch events for swipe controls on canvas
+    if (canvas) {
+        canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+        canvas.addEventListener('touchmove', handleCanvasMove, { passive: false });
+        canvas.addEventListener('touchend', handleCanvasEnd);
+    }
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        debug('Window resized');
+        resizeCanvas();
+        draw();
+    });
+
+    // Handle keyboard input
+    document.addEventListener('keydown', handleKeydown);
+}
 
 // Handle touch events for swipe controls on canvas
 const handleCanvasTouch = (e) => {
@@ -175,10 +253,6 @@ const handleCanvasEnd = (e) => {
     touchStartX = null;
     touchStartY = null;
 };
-
-canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
-canvas.addEventListener('touchmove', handleCanvasMove, { passive: false });
-canvas.addEventListener('touchend', handleCanvasEnd);
 
 // Handle canvas resize
 function resizeCanvas() {
@@ -353,7 +427,7 @@ function endGame() {
 }
 
 // Handle keyboard input
-document.addEventListener('keydown', (event) => {
+function handleKeydown(event) {
     switch (event.key) {
         case 'ArrowUp':
             if (direction !== 'down') nextDirection = 'up';
@@ -371,13 +445,4 @@ document.addEventListener('keydown', (event) => {
             if (gameOver) init();
             break;
     }
-});
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    resizeCanvas();
-    draw();
-});
-
-// Start the game when the page loads
-window.onload = init; 
+} 
