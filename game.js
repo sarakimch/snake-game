@@ -44,20 +44,6 @@ const FLOWERS = ['🌸', '🌹', '🌺', '🌻', '🌼', '💐', '🌷'];
 
 // Game variables
 let canvas, ctx, gameLoop;
-
-try {
-    canvas = document.getElementById('gameCanvas');
-    if (!canvas) {
-        throw new Error('Canvas element not found');
-    }
-    ctx = canvas.getContext('2d');
-    if (!ctx) {
-        throw new Error('Could not get canvas context');
-    }
-} catch (error) {
-    logError(error);
-}
-
 let score = 0;
 let level = 1;
 let fruitsInLevel = 0;
@@ -68,6 +54,7 @@ let nextDirection = 'right';
 let food = null;
 let gameOver = false;
 let currentFlower = FLOWERS[0];
+let isInitialized = false;
 
 // Touch controls
 let touchStartX = null;
@@ -76,114 +63,156 @@ const MIN_SWIPE = 30; // Minimum swipe distance to trigger direction change
 
 // Wait for DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    debug('DOM loaded, initializing game...');
-    try {
-        // Initialize game elements
-        canvas = document.getElementById('gameCanvas');
-        if (!canvas) {
-            throw new Error('Canvas element not found after DOM load');
-        }
-        ctx = canvas.getContext('2d');
-        if (!ctx) {
-            throw new Error('Could not get canvas context after DOM load');
-        }
+    debug('DOM loaded, waiting for window load...');
+    
+    // Wait for window load to ensure all resources are loaded
+    window.addEventListener('load', function() {
+        debug('Window loaded, initializing game...');
+        try {
+            // Initialize game elements
+            canvas = document.getElementById('gameCanvas');
+            if (!canvas) {
+                throw new Error('Canvas element not found after DOM load');
+            }
+            ctx = canvas.getContext('2d');
+            if (!ctx) {
+                throw new Error('Could not get canvas context after DOM load');
+            }
 
-        // Set up event listeners
-        setupEventListeners();
-        
-        // Initialize the game
-        init();
-        
-        debug('Game initialization complete');
-    } catch (error) {
-        logError(error);
-    }
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize the game
+            init();
+            
+            // Hide loading screen
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            
+            debug('Game initialization complete');
+        } catch (error) {
+            logError(error);
+            debug('Error during game initialization: ' + error.message);
+            
+            // Show error in loading screen
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.textContent = 'Error loading game: ' + error.message;
+                loading.style.color = '#ff6b6b';
+            }
+        }
+    });
 });
 
 // Set up event listeners
 function setupEventListeners() {
     debug('Setting up event listeners...');
     
-    // Direction button controls
-    const directionButtons = {
-        'up-btn': 'up',
-        'down-btn': 'down',
-        'left-btn': 'left',
-        'right-btn': 'right'
-    };
+    try {
+        // Direction button controls
+        const directionButtons = {
+            'up-btn': 'up',
+            'down-btn': 'down',
+            'left-btn': 'left',
+            'right-btn': 'right'
+        };
 
-    Object.entries(directionButtons).forEach(([btnId, dir]) => {
-        const btn = document.getElementById(btnId);
-        if (!btn) {
-            debug(`Button not found: ${btnId}`);
-            return;
-        }
-        
-        const handleDirectionInput = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            debug(`Direction button pressed: ${dir}`);
-            
-            if (gameOver) {
-                debug('Game over, restarting');
-                init();
+        Object.entries(directionButtons).forEach(([btnId, dir]) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) {
+                debug(`Button not found: ${btnId}`);
                 return;
             }
             
-            const canChangeDirection = 
-                (dir === 'up' && direction !== 'down') ||
-                (dir === 'down' && direction !== 'up') ||
-                (dir === 'left' && direction !== 'right') ||
-                (dir === 'right' && direction !== 'left');
+            const handleDirectionInput = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                debug(`Direction button pressed: ${dir}`);
+                
+                if (gameOver) {
+                    debug('Game over, restarting');
+                    init();
+                    return;
+                }
+                
+                const canChangeDirection = 
+                    (dir === 'up' && direction !== 'down') ||
+                    (dir === 'down' && direction !== 'up') ||
+                    (dir === 'left' && direction !== 'right') ||
+                    (dir === 'right' && direction !== 'left');
+                
+                if (canChangeDirection) {
+                    debug(`Direction changed to: ${dir}`);
+                    nextDirection = dir;
+                } else {
+                    debug(`Invalid direction change: ${dir} (current: ${direction})`);
+                }
+            };
             
-            if (canChangeDirection) {
-                debug(`Direction changed to: ${dir}`);
-                nextDirection = dir;
-            } else {
-                debug(`Invalid direction change: ${dir} (current: ${direction})`);
-            }
-        };
-        
-        btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
-        btn.addEventListener('mousedown', handleDirectionInput);
-    });
+            // Remove any existing listeners before adding new ones
+            btn.removeEventListener('touchstart', handleDirectionInput);
+            btn.removeEventListener('mousedown', handleDirectionInput);
+            
+            // Add new listeners
+            btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
+            btn.addEventListener('mousedown', handleDirectionInput);
+        });
 
-    // Prevent default touch behaviors on game container
-    const gameContainer = document.getElementById('game-container');
-    if (!gameContainer) {
-        debug('Game container not found');
-        return;
-    }
+        // Prevent default touch behaviors on game container
+        const gameContainer = document.getElementById('game-container');
+        if (gameContainer) {
+            const preventDefaultTouch = (e) => {
+                if (e.target.closest('#direction-controls')) {
+                    debug('Touch on controls, allowing event');
+                    return;
+                }
+                debug('Preventing default touch behavior');
+                e.preventDefault();
+            };
 
-    const preventDefaultTouch = (e) => {
-        if (e.target.closest('#direction-controls')) {
-            debug('Touch on controls, allowing event');
-            return;
+            // Remove any existing listeners before adding new ones
+            ['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
+                gameContainer.removeEventListener(eventType, preventDefaultTouch);
+                gameContainer.addEventListener(eventType, preventDefaultTouch, { passive: false });
+            });
+        } else {
+            debug('Game container not found');
         }
-        debug('Preventing default touch behavior');
-        e.preventDefault();
-    };
 
-    ['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
-        gameContainer.addEventListener(eventType, preventDefaultTouch, { passive: false });
-    });
+        // Handle touch events for swipe controls on canvas
+        if (canvas) {
+            // Remove any existing listeners before adding new ones
+            canvas.removeEventListener('touchstart', handleCanvasTouch);
+            canvas.removeEventListener('touchmove', handleCanvasMove);
+            canvas.removeEventListener('touchend', handleCanvasEnd);
+            
+            // Add new listeners
+            canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+            canvas.addEventListener('touchmove', handleCanvasMove, { passive: false });
+            canvas.addEventListener('touchend', handleCanvasEnd);
+        } else {
+            debug('Canvas not found for touch events');
+        }
 
-    // Handle touch events for swipe controls on canvas
-    if (canvas) {
-        canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
-        canvas.addEventListener('touchmove', handleCanvasMove, { passive: false });
-        canvas.addEventListener('touchend', handleCanvasEnd);
+        // Handle window resize
+        window.removeEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', () => {
+            debug('Window resized');
+            resizeCanvas();
+            draw();
+        });
+
+        // Handle keyboard input
+        document.removeEventListener('keydown', handleKeydown);
+        document.addEventListener('keydown', handleKeydown);
+        
+        debug('Event listeners setup complete');
+    } catch (error) {
+        logError(error);
+        debug('Error setting up event listeners: ' + error.message);
     }
-
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        debug('Window resized');
-        resizeCanvas();
-        draw();
-    });
-
-    // Handle keyboard input
-    document.addEventListener('keydown', handleKeydown);
 }
 
 // Handle touch events for swipe controls on canvas
@@ -259,15 +288,27 @@ function resizeCanvas() {
     const container = document.getElementById('game-container');
     const oldWidth = canvas.width;
     const oldHeight = canvas.height;
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    CELL_SIZE = Math.floor(canvas.width / GRID_SIZE);
-    debug(`Canvas resized: ${oldWidth}x${oldHeight} -> ${canvas.width}x${canvas.height}`);
+    
+    // Get the actual dimensions of the container
+    const rect = container.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    // Calculate cell size based on the smaller dimension
+    CELL_SIZE = Math.floor(Math.min(canvas.width, canvas.height) / GRID_SIZE);
+    
+    debug(`Canvas resized: ${oldWidth}x${oldHeight} -> ${canvas.width}x${canvas.height}, Cell size: ${CELL_SIZE}`);
+    
+    // Redraw if game is already running
+    if (isInitialized) {
+        draw();
+    }
 }
 
 // Initialize the game
 function init() {
     debug('Initializing game');
+    
     // Set up canvas size
     resizeCanvas();
     
@@ -284,6 +325,7 @@ function init() {
     fruitsInLevel = 0;
     currentSpeed = INITIAL_GAME_SPEED;
     gameOver = false;
+    isInitialized = true;
     
     // Hide game over message
     document.getElementById('game-over').style.display = 'none';
@@ -294,9 +336,13 @@ function init() {
     // Create first food
     createFood();
     
+    // Draw initial state
+    draw();
+    
     // Start game loop
     if (gameLoop) clearInterval(gameLoop);
     gameLoop = setInterval(gameStep, currentSpeed);
+    
     debug('Game initialized and started');
 }
 
@@ -307,17 +353,26 @@ function updateScoreAndLevel() {
 
 // Draw grass pattern
 function drawGrassPattern() {
+    const offsetX = (canvas.width - GRID_SIZE * CELL_SIZE) / 2;
+    const offsetY = (canvas.height - GRID_SIZE * CELL_SIZE) / 2;
+    
+    // Clear the canvas
+    ctx.fillStyle = COLORS.darkGrass;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw the game grid
     for (let y = 0; y < GRID_SIZE; y++) {
         for (let x = 0; x < GRID_SIZE; x++) {
             ctx.fillStyle = (x + y) % 2 === 0 ? COLORS.darkGrass : COLORS.lightGrass;
             ctx.fillRect(
-                x * CELL_SIZE,
-                y * CELL_SIZE,
+                offsetX + x * CELL_SIZE,
+                offsetY + y * CELL_SIZE,
                 CELL_SIZE,
                 CELL_SIZE
             );
         }
     }
+    return { offsetX, offsetY };
 }
 
 // Create new food at random position
@@ -394,29 +449,35 @@ function gameStep() {
 
 // Draw the game state
 function draw() {
-    // Draw grass pattern
-    drawGrassPattern();
+    if (!ctx || !canvas) {
+        debug('Cannot draw: context or canvas not available');
+        return;
+    }
+    
+    const { offsetX, offsetY } = drawGrassPattern();
     
     // Draw snake
     snake.forEach((segment, index) => {
         ctx.fillStyle = index === 0 ? COLORS.snakeHead : COLORS.snake;
         ctx.fillRect(
-            segment.x * CELL_SIZE + 1,
-            segment.y * CELL_SIZE + 1,
+            offsetX + segment.x * CELL_SIZE + 1,
+            offsetY + segment.y * CELL_SIZE + 1,
             CELL_SIZE - 2,
             CELL_SIZE - 2
         );
     });
     
     // Draw flower (food)
-    ctx.font = `${CELL_SIZE * 0.7}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(
-        currentFlower,
-        (food.x * CELL_SIZE) + (CELL_SIZE / 2),
-        (food.y * CELL_SIZE) + (CELL_SIZE / 2) + (CELL_SIZE * 0.1)
-    );
+    if (food) {
+        ctx.font = `${CELL_SIZE * 0.7}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+            currentFlower,
+            offsetX + (food.x * CELL_SIZE) + (CELL_SIZE / 2),
+            offsetY + (food.y * CELL_SIZE) + (CELL_SIZE / 2)
+        );
+    }
 }
 
 // End the game
