@@ -37,19 +37,6 @@ let touchStartX = null;
 let touchStartY = null;
 const MIN_SWIPE = 30; // Minimum swipe distance to trigger direction change
 
-// Controls toggle functionality
-const controlsToggle = document.getElementById('controls-toggle');
-const directionControls = document.getElementById('direction-controls');
-let controlsVisible = false;
-
-controlsToggle.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    controlsVisible = !controlsVisible;
-    directionControls.style.display = controlsVisible ? 'block' : 'none';
-    controlsToggle.textContent = controlsVisible ? 'Hide' : 'Controls';
-});
-
 // Direction button controls
 const directionButtons = {
     'up-btn': 'up',
@@ -89,9 +76,7 @@ Object.entries(directionButtons).forEach(([btnId, dir]) => {
 const gameContainer = document.getElementById('game-container');
 ['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
     gameContainer.addEventListener(eventType, (e) => {
-        if (controlsVisible) {
-            e.preventDefault();
-        }
+        e.preventDefault();
     }, { passive: false });
 });
 
