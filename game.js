@@ -95,23 +95,19 @@ const gameContainer = document.getElementById('game-container');
     }, { passive: false });
 });
 
-// Handle touch events for swipe controls when directional pad is hidden
+// Handle touch events for swipe controls
 canvas.addEventListener('touchstart', (e) => {
-    if (!controlsVisible) {
-        e.preventDefault();
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-    }
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
 });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (!controlsVisible) {
-        e.preventDefault();
-    }
+    e.preventDefault();
 });
 
 canvas.addEventListener('touchend', (e) => {
-    if (!controlsVisible && touchStartX !== null && touchStartY !== null) {
+    if (touchStartX !== null && touchStartY !== null) {
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
         
