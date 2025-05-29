@@ -42,10 +42,12 @@ const controlsToggle = document.getElementById('controls-toggle');
 const directionControls = document.getElementById('direction-controls');
 let controlsVisible = false;
 
-controlsToggle.addEventListener('click', () => {
+controlsToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     controlsVisible = !controlsVisible;
     directionControls.style.display = controlsVisible ? 'block' : 'none';
-    controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Controls';
+    controlsToggle.textContent = controlsVisible ? 'Hide' : 'Controls';
 });
 
 // Direction button controls
@@ -62,16 +64,84 @@ Object.entries(directionButtons).forEach(([btnId, dir]) => {
     // Handle both touch and click events
     ['touchstart', 'mousedown'].forEach(eventType => {
         btn.addEventListener(eventType, (e) => {
-            e.preventDefault(); // Prevent default behaviors
-            if (!gameOver && 
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (gameOver) {
+                init();
+                return;
+            }
+            
+            const canChangeDirection = 
                 (dir === 'up' && direction !== 'down') ||
                 (dir === 'down' && direction !== 'up') ||
                 (dir === 'left' && direction !== 'right') ||
-                (dir === 'right' && direction !== 'left')) {
+                (dir === 'right' && direction !== 'left');
+            
+            if (canChangeDirection) {
                 nextDirection = dir;
             }
         });
     });
+});
+
+// Prevent default touch behaviors on game container
+const gameContainer = document.getElementById('game-container');
+['touchstart', 'touchmove', 'touchend'].forEach(eventType => {
+    gameContainer.addEventListener(eventType, (e) => {
+        if (controlsVisible) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+});
+
+// Handle touch events for swipe controls when directional pad is hidden
+canvas.addEventListener('touchstart', (e) => {
+    if (!controlsVisible) {
+        e.preventDefault();
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!controlsVisible) {
+        e.preventDefault();
+    }
+});
+
+canvas.addEventListener('touchend', (e) => {
+    if (!controlsVisible && touchStartX !== null && touchStartY !== null) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        
+        if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
+            if (gameOver) {
+                init();
+            }
+            return;
+        }
+        
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX > 0 && direction !== 'left') {
+                nextDirection = 'right';
+            } else if (deltaX < 0 && direction !== 'right') {
+                nextDirection = 'left';
+            }
+        } else {
+            if (deltaY > 0 && direction !== 'up') {
+                nextDirection = 'down';
+            } else if (deltaY < 0 && direction !== 'down') {
+                nextDirection = 'up';
+            }
+        }
+        
+        touchStartX = null;
+        touchStartY = null;
+    }
 });
 
 // Handle canvas resize
@@ -266,59 +336,6 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('resize', () => {
     resizeCanvas();
     draw();
-});
-
-// Handle touch events
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault(); // Prevent scrolling
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-});
-
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // Prevent scrolling
-});
-
-canvas.addEventListener('touchend', (e) => {
-    if (!touchStartX || !touchStartY) return;
-
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-
-    // Only change direction if the swipe is long enough
-    if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
-        return;
-    }
-
-    // Determine if horizontal or vertical swipe based on which delta is larger
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // Horizontal swipe
-        if (deltaX > 0 && direction !== 'left') {
-            nextDirection = 'right';
-        } else if (deltaX < 0 && direction !== 'right') {
-            nextDirection = 'left';
-        }
-    } else {
-        // Vertical swipe
-        if (deltaY > 0 && direction !== 'up') {
-            nextDirection = 'down';
-        } else if (deltaY < 0 && direction !== 'down') {
-            nextDirection = 'up';
-        }
-    }
-
-    touchStartX = null;
-    touchStartY = null;
-});
-
-// Add touch event for restarting game
-canvas.addEventListener('touchstart', (e) => {
-    if (gameOver) {
-        init();
-    }
 });
 
 // Start the game when the page loads
