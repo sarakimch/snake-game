@@ -6,6 +6,17 @@ const INITIAL_GAME_SPEED = 200; // Slower initial speed (higher number = slower)
 const SPEED_INCREASE_PER_LEVEL = 20; // How much faster per level (ms)
 const FRUITS_PER_LEVEL = 10; // Fruits needed to advance level
 
+// Debug logging
+function debug(msg) {
+    console.log(`[DEBUG] ${msg}`);
+    // Also display on screen for mobile debugging
+    const debugDiv = document.getElementById('debug-log');
+    if (debugDiv) {
+        debugDiv.textContent = msg;
+        setTimeout(() => debugDiv.textContent = '', 3000); // Clear after 3 seconds
+    }
+}
+
 // Colors
 const COLORS = {
     darkGrass: '#2d5a3c',
@@ -48,13 +59,18 @@ const directionButtons = {
 // Add touch and click handlers for direction buttons
 Object.entries(directionButtons).forEach(([btnId, dir]) => {
     const btn = document.getElementById(btnId);
-    if (!btn) return; // Skip if button not found
+    if (!btn) {
+        debug(`Button not found: ${btnId}`);
+        return;
+    }
     
     const handleDirectionInput = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        debug(`Direction button pressed: ${dir}`);
         
         if (gameOver) {
+            debug('Game over, restarting');
             init();
             return;
         }
@@ -66,11 +82,13 @@ Object.entries(directionButtons).forEach(([btnId, dir]) => {
             (dir === 'right' && direction !== 'left');
         
         if (canChangeDirection) {
+            debug(`Direction changed to: ${dir}`);
             nextDirection = dir;
+        } else {
+            debug(`Invalid direction change: ${dir} (current: ${direction})`);
         }
     };
     
-    // Handle both touch and click events
     btn.addEventListener('touchstart', handleDirectionInput, { passive: false });
     btn.addEventListener('mousedown', handleDirectionInput);
 });
@@ -78,7 +96,11 @@ Object.entries(directionButtons).forEach(([btnId, dir]) => {
 // Prevent default touch behaviors on game container
 const gameContainer = document.getElementById('game-container');
 const preventDefaultTouch = (e) => {
-    if (e.target.closest('#direction-controls')) return; // Allow touch events on controls
+    if (e.target.closest('#direction-controls')) {
+        debug('Touch on controls, allowing event');
+        return;
+    }
+    debug('Preventing default touch behavior');
     e.preventDefault();
 };
 
@@ -88,10 +110,14 @@ const preventDefaultTouch = (e) => {
 
 // Handle touch events for swipe controls on canvas
 const handleCanvasTouch = (e) => {
-    if (e.target !== canvas) return; // Only handle touches on the canvas
+    if (e.target !== canvas) {
+        debug('Touch not on canvas, ignoring');
+        return;
+    }
     e.preventDefault();
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    debug(`Canvas touch start: (${touchStartX}, ${touchStartY})`);
 };
 
 const handleCanvasMove = (e) => {
@@ -100,7 +126,15 @@ const handleCanvasMove = (e) => {
 };
 
 const handleCanvasEnd = (e) => {
-    if (e.target !== canvas || touchStartX === null || touchStartY === null) return;
+    if (e.target !== canvas) {
+        debug('Touch end not on canvas, ignoring');
+        return;
+    }
+    
+    if (touchStartX === null || touchStartY === null) {
+        debug('No touch start coordinates, ignoring');
+        return;
+    }
     
     const touchEndX = e.changedTouches[0].clientX;
     const touchEndY = e.changedTouches[0].clientY;
@@ -108,8 +142,11 @@ const handleCanvasEnd = (e) => {
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
     
+    debug(`Swipe delta: (${deltaX}, ${deltaY})`);
+    
     if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
         if (gameOver) {
+            debug('Small movement during game over, restarting');
             init();
         }
         touchStartX = null;
@@ -119,14 +156,18 @@ const handleCanvasEnd = (e) => {
     
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
         if (deltaX > 0 && direction !== 'left') {
+            debug('Swipe right');
             nextDirection = 'right';
         } else if (deltaX < 0 && direction !== 'right') {
+            debug('Swipe left');
             nextDirection = 'left';
         }
     } else {
         if (deltaY > 0 && direction !== 'up') {
+            debug('Swipe down');
             nextDirection = 'down';
         } else if (deltaY < 0 && direction !== 'down') {
+            debug('Swipe up');
             nextDirection = 'up';
         }
     }
@@ -142,13 +183,17 @@ canvas.addEventListener('touchend', handleCanvasEnd);
 // Handle canvas resize
 function resizeCanvas() {
     const container = document.getElementById('game-container');
+    const oldWidth = canvas.width;
+    const oldHeight = canvas.height;
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
     CELL_SIZE = Math.floor(canvas.width / GRID_SIZE);
+    debug(`Canvas resized: ${oldWidth}x${oldHeight} -> ${canvas.width}x${canvas.height}`);
 }
 
 // Initialize the game
 function init() {
+    debug('Initializing game');
     // Set up canvas size
     resizeCanvas();
     
@@ -178,6 +223,7 @@ function init() {
     // Start game loop
     if (gameLoop) clearInterval(gameLoop);
     gameLoop = setInterval(gameStep, currentSpeed);
+    debug('Game initialized and started');
 }
 
 // Update score and level display
