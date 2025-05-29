@@ -32,6 +32,11 @@ let gameLoop = null;
 let gameOver = false;
 let currentFlower = FLOWERS[0];
 
+// Touch controls
+let touchStartX = null;
+let touchStartY = null;
+const MIN_SWIPE = 30; // Minimum swipe distance to trigger direction change
+
 // Handle canvas resize
 function resizeCanvas() {
     const container = document.getElementById('game-container');
@@ -224,6 +229,59 @@ document.addEventListener('keydown', (event) => {
 window.addEventListener('resize', () => {
     resizeCanvas();
     draw();
+});
+
+// Handle touch events
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault(); // Prevent scrolling
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Prevent scrolling
+});
+
+canvas.addEventListener('touchend', (e) => {
+    if (!touchStartX || !touchStartY) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+
+    // Only change direction if the swipe is long enough
+    if (Math.abs(deltaX) < MIN_SWIPE && Math.abs(deltaY) < MIN_SWIPE) {
+        return;
+    }
+
+    // Determine if horizontal or vertical swipe based on which delta is larger
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // Horizontal swipe
+        if (deltaX > 0 && direction !== 'left') {
+            nextDirection = 'right';
+        } else if (deltaX < 0 && direction !== 'right') {
+            nextDirection = 'left';
+        }
+    } else {
+        // Vertical swipe
+        if (deltaY > 0 && direction !== 'up') {
+            nextDirection = 'down';
+        } else if (deltaY < 0 && direction !== 'down') {
+            nextDirection = 'up';
+        }
+    }
+
+    touchStartX = null;
+    touchStartY = null;
+});
+
+// Add touch event for restarting game
+canvas.addEventListener('touchstart', (e) => {
+    if (gameOver) {
+        init();
+    }
 });
 
 // Start the game when the page loads
