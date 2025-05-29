@@ -37,6 +37,43 @@ let touchStartX = null;
 let touchStartY = null;
 const MIN_SWIPE = 30; // Minimum swipe distance to trigger direction change
 
+// Controls toggle functionality
+const controlsToggle = document.getElementById('controls-toggle');
+const directionControls = document.getElementById('direction-controls');
+let controlsVisible = false;
+
+controlsToggle.addEventListener('click', () => {
+    controlsVisible = !controlsVisible;
+    directionControls.style.display = controlsVisible ? 'block' : 'none';
+    controlsToggle.textContent = controlsVisible ? 'Hide Controls' : 'Controls';
+});
+
+// Direction button controls
+const directionButtons = {
+    'up-btn': 'up',
+    'down-btn': 'down',
+    'left-btn': 'left',
+    'right-btn': 'right'
+};
+
+Object.entries(directionButtons).forEach(([btnId, dir]) => {
+    const btn = document.getElementById(btnId);
+    
+    // Handle both touch and click events
+    ['touchstart', 'mousedown'].forEach(eventType => {
+        btn.addEventListener(eventType, (e) => {
+            e.preventDefault(); // Prevent default behaviors
+            if (!gameOver && 
+                (dir === 'up' && direction !== 'down') ||
+                (dir === 'down' && direction !== 'up') ||
+                (dir === 'left' && direction !== 'right') ||
+                (dir === 'right' && direction !== 'left')) {
+                nextDirection = dir;
+            }
+        });
+    });
+});
+
 // Handle canvas resize
 function resizeCanvas() {
     const container = document.getElementById('game-container');

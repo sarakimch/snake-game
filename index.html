@@ -75,6 +75,54 @@
             border: 2px solid #2d5a3c;
             white-space: nowrap;
         }
+        #controls-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(26, 71, 42, 0.8);
+            color: #8fde5d;
+            border: 2px solid #2d5a3c;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', system-ui;
+            font-size: 12px;
+            text-shadow: 1px 1px 0px #1a472a;
+            z-index: 3;
+        }
+        #direction-controls {
+            display: none;
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+        }
+        .control-row {
+            display: flex;
+            justify-content: center;
+            margin: 4px 0;
+        }
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            margin: 0 4px;
+            background-color: rgba(26, 71, 42, 0.8);
+            border: 2px solid #2d5a3c;
+            color: #8fde5d;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 4px;
+            text-shadow: 1px 1px 0px #1a472a;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .control-btn:active {
+            background-color: #2d5a3c;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -85,6 +133,19 @@
         <div id="game-over">
             Game Over!<br>
             Press Space to Restart
+        </div>
+        <button id="controls-toggle">Controls</button>
+        <div id="direction-controls">
+            <div class="control-row">
+                <button class="control-btn" id="up-btn">↑</button>
+            </div>
+            <div class="control-row">
+                <button class="control-btn" id="left-btn">←</button>
+                <button class="control-btn" id="right-btn">→</button>
+            </div>
+            <div class="control-row">
+                <button class="control-btn" id="down-btn">↓</button>
+            </div>
         </div>
         <div id="love-message">seoji loves aaron ❤️</div>
     </div>
