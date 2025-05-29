@@ -18,4 +18,4 @@ A retro-style snake game where you control a snake moving through a pixel grass 
 
 ## Play Now
 
-Visit [https://[your-username].github.io/snake-game](https://[your-username].github.io/snake-game) to play! 
+Visit [https://sarakimch.github.io/snake-game](https://sarakimch.github.io/snake-game) to play! 
